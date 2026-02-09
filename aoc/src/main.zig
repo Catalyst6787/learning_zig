@@ -19,11 +19,13 @@ pub fn main(init: std.process.Init) !void {
     for (1..args.len) |i| {
         std.debug.print("{s}\n", .{args[i]});
     }
-    var random: [10]u8 = undefined;
+    var random: [5]u8 = undefined;
     for (&random, 0..) |*elem, i| {
         elem.* = @intCast(i);
     }
-    var prng: std.Random.DefaultPrng = .init(51235123);
+    var seed_as_u8: [8]u8 = undefined;
+    init.io.random(&seed_as_u8);
+    var prng: std.Random.DefaultPrng = .init(@bitCast(seed_as_u8));
     const rand = prng.random();
     std.Random.shuffle(rand, u8, &random);
     std.debug.print("random:\n", .{});

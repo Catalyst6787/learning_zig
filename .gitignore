@@ -1,2 +1,3 @@
 ziglings/
 .zig-cache/
+zig-out/
