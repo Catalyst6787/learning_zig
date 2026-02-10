@@ -10,14 +10,14 @@ fn print_slice(slice: []const u8) void {
     std.debug.print("\n", .{});
 }
 
-fn Stack(comptime T: type, comptime len: T) type {
+fn Stack(comptime T: type, comptime len: usize) type {
     return struct {
         separator: T,
         arr: [len]T,
 
         fn initZeroed() @This() {
             return .{
-                .separator = len,
+                .separator = @intCast(len),
                 .arr = [_]T{0} ** len,
             };
         }
@@ -26,12 +26,27 @@ fn Stack(comptime T: type, comptime len: T) type {
                 elem.* = @intCast(i);
             }
         }
-        fn shuffle(self: *@This(), rnd: std.Random) void {
-            std.Random.shuffle(rnd, T, &self.arr);
+        fn shuffle(self: *@This(), rnd: *const std.Random) void {
+            std.Random.shuffle(rnd.*, T, &self.arr);
         }
         fn print(self: @This()) void {
-            std.debug.print("len: {d}, separator: {d}, arr:\n", .{ len, self.separator });
-            print_slice(&self.arr);
+            std.debug.print("len: {d}, separator: {d}, a:\n", .{ len, self.separator });
+            if (self.separator > 0) {
+                for (self.arr[0..self.separator]) |elem| {
+                    std.debug.print("|{d}", .{elem});
+                }
+                std.debug.print("|\n", .{});
+            }
+            std.debug.print("b:\n", .{});
+            if (self.separator == len) {
+                std.debug.print("|empty|\n", .{});
+                return;
+            }
+            var i: usize = len - 1;
+            while (i > self.separator) : (i -= 1) {
+                std.debug.print("|{d}", .{self.arr[i]});
+            }
+            std.debug.print("|\n", .{});
         }
     };
 }
@@ -45,9 +60,8 @@ pub fn main(init: std.process.Init) !void {
     var prng = std.Random.DefaultPrng.init(seed);
     const rnd = prng.random();
 
-    const stack_type = Stack(u8, 10);
-    var random_stack = stack_type.initZeroed();
+    var random_stack = Stack(u8, 10).initZeroed();
     random_stack.fill_normalized();
-    random_stack.shuffle(rnd);
+    random_stack.shuffle(&rnd);
     random_stack.print();
 }
