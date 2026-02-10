@@ -1,5 +1,4 @@
 const std = @import("std");
-
 const aoc = @import("aoc");
 
 fn print_slice(slice: []const u8) void {
@@ -11,46 +10,66 @@ fn print_slice(slice: []const u8) void {
     std.debug.print("\n", .{});
 }
 
-pub fn get_rdn(io: std.Io) std.Random {
-    var seed_as_u8: [8]u8 = undefined;
-    io.random(&seed_as_u8);
-    var prng: std.Random.DefaultPrng = .init(@bitCast(seed_as_u8));
-    const rand = prng.random();
-    return rand;
-}
-
-fn Stack(comptime T: type) type {
+fn Stack(comptime T: type, comptime len: T) type {
     return struct {
+        len: T,
         separator: T,
-        slice: []T,
+        arr: [len]T,
+
+        fn init_stack(separator: T, slice: []T) Stack(T, len) {
+            var new_stack: Stack(T) = undefined;
+            new_stack.separator = separator;
+            new_stack.arr = slice;
+            return new_stack;
+        }
+        fn get_zeroed() Stack(T, len) {
+            var empty_stack: Stack(T, len) = undefined;
+            empty_stack.separator = len;
+            empty_stack.arr = [_]T{0} ** len;
+            // for (0..len) |i| {
+            //     empty_stack.arr[i] = 0;
+            // }
+            return empty_stack;
+        }
+        fn fill_normalized(self: *Stack(T, len)) void {
+            var slice: [len]T = undefined;
+            for (&slice, 0..) |*elem, i| {
+                elem.* = @intCast(i);
+            }
+            self.arr = slice;
+        }
+        fn shuffle(self: *Stack(T, len), rnd: std.Random) void {
+            std.Random.shuffle(rnd, T, &self.arr);
+        }
+        fn print(self: Stack(T, len)) void {
+            std.debug.print("len: {d}, separator: {d}, arr:\n", .{ len, self.separator });
+            print_slice(&self.arr);
+        }
     };
 }
 
-fn get_stack(comptime T: type, separator: T, slice: []T) Stack(T) {
-    var new_stack: Stack(u8) = undefined;
-    new_stack.separator = separator;
-    new_stack.slice = slice;
-    return new_stack;
-}
-
 pub fn main(init: std.process.Init) !void {
-    const lenght = 10;
+    // const gpa = init.gpa;
+    // const args: []const []const u8 = try init.minimal.args.toSlice(gpa);
+    // defer gpa.free(args);
+    var seed: u64 = undefined;
+    init.io.random(std.mem.asBytes(&seed));
+    var prng = std.Random.DefaultPrng.init(seed);
+    const rnd = prng.random();
 
-    const gpa = init.gpa;
-    const args: []const []const u8 = try init.minimal.args.toSlice(gpa);
-    defer gpa.free(args);
+    const stack_type = Stack(u8, 10);
+    var random_stack = stack_type.get_zeroed();
+    random_stack.print();
+    random_stack.fill_normalized();
+    random_stack.print();
+    random_stack.shuffle(rnd);
+    random_stack.print();
 
-    var random_slice: [lenght]u8 = undefined;
-    for (&random_slice, 0..) |*elem, i| {
-        elem.* = @intCast(i);
-    }
-    const rnd = get_rdn(init.io);
-    std.Random.shuffle(rnd, u8, &random_slice);
+    // const my_stack = stack_type.get_stack(lenght, &random_slice);
 
-    const my_stack = get_stack(u8, lenght, &random_slice);
-    std.debug.print("stack.slice:\n", .{});
-    print_slice(my_stack.slice);
-    std.debug.print("stack.separator: {}", .{my_stack.separator});
+    // std.debug.print("stack.slice:\n", .{});
+    // print_slice(my_stack.slice);
+    // std.debug.print("stack.separator: {}", .{my_stack.separator});
 
     std.debug.print("\n", .{});
 }
