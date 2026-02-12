@@ -1,16 +1,8 @@
 const std = @import("std");
 const aoc = @import("aoc");
 
-fn print_slice(slice: []const u8) void {
-    if (slice.len == 0) return;
-    std.debug.print("|", .{});
-    for (slice) |elem| {
-        std.debug.print("{d}|", .{elem});
-    }
-    std.debug.print("\n", .{});
-}
-
 fn Stack(comptime T: type, comptime len: usize) type {
+    std.debug.assert(len > 1);
     return struct {
         separator: T,
         arr: [len]T,
@@ -29,8 +21,11 @@ fn Stack(comptime T: type, comptime len: usize) type {
         fn shuffle(self: *@This(), rnd: *const std.Random) void {
             std.Random.shuffle(rnd.*, T, &self.arr);
         }
-        fn print(self: @This()) void {
+        fn print(self: *const @This()) void {
             std.debug.print("len: {d}, separator: {d}, a:\n", .{ len, self.separator });
+            if (self.separator == 0) {
+                std.debug.print("|empty|\n", .{});
+            }
             if (self.separator > 0) {
                 for (self.arr[0..self.separator]) |elem| {
                     std.debug.print("|{d}", .{elem});
@@ -43,12 +38,87 @@ fn Stack(comptime T: type, comptime len: usize) type {
                 return;
             }
             var i: usize = len - 1;
-            while (i > self.separator) : (i -= 1) {
+            while (i >= self.separator) : (i -= 1) {
                 std.debug.print("|{d}", .{self.arr[i]});
+                if (i == 0) break;
             }
             std.debug.print("|\n", .{});
         }
+        fn push_a(self: *@This()) void {
+            std.debug.assert(self.separator < len);
+            self.separator += 1;
+        }
+        fn push_b(self: *@This()) void {
+            std.debug.assert(self.separator > 0);
+            self.separator -= 1;
+        }
+        fn swap_a(self: *@This()) void {
+            std.debug.assert(self.separator > 1);
+            const tmp: T = self.arr[self.separator - 1];
+            self.arr[self.separator - 1] = self.arr[self.separator - 2];
+            self.arr[self.separator - 2] = tmp;
+        }
+        fn swap_b(self: *@This()) void {
+            std.debug.assert(len - self.separator > 1);
+            const tmp: T = self.arr[self.separator];
+            self.arr[self.separator] = self.arr[self.separator + 1];
+            self.arr[self.separator + 1] = tmp;
+        }
     };
+}
+
+test "test push" {
+    var stack = Stack(u8, 10).initZeroed();
+    stack.fill_normalized();
+    stack.push_b();
+    stack.push_b();
+    try std.testing.expectEqual(stack.separator, stack.arr.len - 2);
+    stack.push_a();
+    try std.testing.expectEqual(stack.separator, stack.arr.len - 1);
+    stack.push_a();
+    try std.testing.expectEqual(stack.separator, stack.arr.len);
+    for (0..9) |i| {
+        _ = i;
+        stack.push_b();
+    }
+    stack.push_b();
+    try std.testing.expectEqual(stack.separator, 0);
+}
+
+test "test swap" {
+    {
+        var stack = Stack(u8, 2).initZeroed();
+        stack.fill_normalized();
+        stack.swap_a();
+        try std.testing.expectEqual(stack.arr[0], 1);
+        try std.testing.expectEqual(stack.arr[1], 0);
+        stack.push_b();
+        stack.push_b();
+
+        stack.swap_b();
+        try std.testing.expectEqual(stack.arr[0], 0);
+        try std.testing.expectEqual(stack.arr[1], 1);
+    }
+    {
+        var stack = Stack(u8, 10).initZeroed();
+        stack.fill_normalized();
+        stack.push_b();
+        stack.push_b();
+
+        try std.testing.expectEqual(stack.arr[stack.separator - 1], 7);
+        stack.swap_a();
+        try std.testing.expectEqual(stack.arr[stack.separator - 1], 6);
+        try std.testing.expectEqual(stack.arr[stack.separator - 2], 7);
+
+        stack.push_b();
+        stack.push_b();
+        stack.push_b();
+        stack.push_b();
+        try std.testing.expectEqual(stack.arr[stack.separator], 4);
+        try std.testing.expectEqual(stack.arr[stack.separator + 1], 5);
+        try std.testing.expectEqual(stack.arr[stack.separator + 2], 7);
+        try std.testing.expectEqual(stack.arr[stack.separator + 3], 6);
+    }
 }
 
 pub fn main(init: std.process.Init) !void {
