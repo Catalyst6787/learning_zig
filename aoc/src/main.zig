@@ -44,6 +44,17 @@ fn Stack(comptime T: type, comptime len: usize) type {
             }
             std.debug.print("|\n", .{});
         }
+        fn count_inversions(self: *const @This()) usize {
+            var inversions: usize = 0;
+            for (self.arr, 0..) |ai, i| {
+                for (self.arr[i + 1 ..]) |aj| {
+                    if (ai > aj) {
+                        inversions += 1;
+                    }
+                }
+            }
+            return inversions;
+        }
         fn push_a(self: *@This()) void {
             std.debug.assert(self.separator < len);
             self.separator += 1;
@@ -85,7 +96,39 @@ fn Stack(comptime T: type, comptime len: usize) type {
             self.rotate_a();
             self.rotate_b();
         }
+        fn rev_rotate_a(self: *@This()) void {
+            std.debug.assert(self.separator > 1);
+            const tmp = self.arr[0];
+            for (0..(self.separator - 1)) |i| {
+                self.arr[i] = self.arr[i + 1];
+            }
+            self.arr[self.separator - 1] = tmp;
+        }
+        fn rev_rotate_b(self: *@This()) void {
+            std.debug.assert(len - self.separator > 1);
+            const tmp = self.arr[len - 1];
+            var i = len - 1;
+            while (i > self.separator) : (i -= 1) {
+                self.arr[i] = self.arr[i - 1];
+            }
+            self.arr[self.separator] = tmp;
+        }
     };
+}
+
+pub fn main(init: std.process.Init) !void {
+    // const gpa = init.gpa;
+    // const args: []const []const u8 = try init.minimal.args.toSlice(gpa);
+    // defer gpa.free(args);
+    var seed: u64 = undefined;
+    init.io.random(std.mem.asBytes(&seed));
+    var prng = std.Random.DefaultPrng.init(seed);
+    const rnd = prng.random();
+
+    var random_stack = Stack(u8, 10).initZeroed();
+    random_stack.fill_normalized();
+    random_stack.shuffle(&rnd);
+    random_stack.print();
 }
 
 test "test push" {
@@ -188,17 +231,60 @@ test "test rotate" {
     }
 }
 
-pub fn main(init: std.process.Init) !void {
-    // const gpa = init.gpa;
-    // const args: []const []const u8 = try init.minimal.args.toSlice(gpa);
-    // defer gpa.free(args);
-    var seed: u64 = undefined;
-    init.io.random(std.mem.asBytes(&seed));
-    var prng = std.Random.DefaultPrng.init(seed);
-    const rnd = prng.random();
+test "test rev rotate" {
+    {
+        var stack = Stack(u8, 4).initZeroed();
+        stack.fill_normalized();
+        stack.rev_rotate_a();
+        try std.testing.expectEqual(stack.arr[0], 1);
+        try std.testing.expectEqual(stack.arr[1], 2);
+        try std.testing.expectEqual(stack.arr[2], 3);
+        try std.testing.expectEqual(stack.arr[3], 0);
+    }
+    {
+        var stack = Stack(u8, 2).initZeroed();
+        stack.fill_normalized();
+        stack.rev_rotate_a();
+        try std.testing.expectEqual(stack.arr[0], 1);
+        try std.testing.expectEqual(stack.arr[1], 0);
+    }
+    {
+        var stack = Stack(u8, 4).initZeroed();
+        stack.fill_normalized();
+        stack.push_b();
+        stack.push_b();
+        stack.push_b();
+        stack.push_b();
+        stack.rev_rotate_b();
+        try std.testing.expectEqual(stack.arr[0], 3);
+        try std.testing.expectEqual(stack.arr[1], 0);
+        try std.testing.expectEqual(stack.arr[2], 1);
+        try std.testing.expectEqual(stack.arr[3], 2);
+    }
+    {
+        var stack = Stack(u8, 2).initZeroed();
+        stack.fill_normalized();
+        stack.push_b();
+        stack.push_b();
+        stack.rev_rotate_b();
+        try std.testing.expectEqual(stack.arr[0], 1);
+        try std.testing.expectEqual(stack.arr[1], 0);
+    }
+}
 
-    var random_stack = Stack(u8, 10).initZeroed();
-    random_stack.fill_normalized();
-    random_stack.shuffle(&rnd);
-    random_stack.print();
+test "test inversion count" {
+    var stack = Stack(u8, 4).initZeroed();
+    stack.fill_normalized();
+    try std.testing.expectEqual(stack.count_inversions(), 0);
+    stack.arr[0] = 9;
+    stack.arr[1] = 5;
+    stack.arr[2] = 7;
+    stack.arr[3] = 6;
+    try std.testing.expectEqual(stack.count_inversions(), 4);
+}
+
+test "inversion count: reverse sorted" {
+    var stack = Stack(u8, 5).initZeroed();
+    stack.arr = [_]u8{ 5, 4, 3, 2, 1 };
+    try std.testing.expectEqual(@as(usize, 10), stack.count_inversions());
 }
