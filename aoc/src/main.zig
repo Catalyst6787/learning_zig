@@ -3,6 +3,7 @@ const aoc = @import("aoc");
 
 fn Stack(comptime T: type, comptime len: usize) type {
     std.debug.assert(len > 1);
+    std.debug.assert(len <= std.math.maxInt(T));
     return struct {
         separator: T,
         arr: [len]T,
@@ -112,6 +113,10 @@ fn Stack(comptime T: type, comptime len: usize) type {
                 self.arr[i] = self.arr[i - 1];
             }
             self.arr[self.separator] = tmp;
+        }
+        fn rev_rotate_r(self: *@This()) void {
+            self.rev_rotate_a();
+            self.rev_rotate_b();
         }
     };
 }
@@ -286,5 +291,5 @@ test "test inversion count" {
 test "inversion count: reverse sorted" {
     var stack = Stack(u8, 5).initZeroed();
     stack.arr = [_]u8{ 5, 4, 3, 2, 1 };
-    try std.testing.expectEqual(@as(usize, 10), stack.count_inversions());
+    try std.testing.expectEqual(stack.count_inversions(), 10);
 }
