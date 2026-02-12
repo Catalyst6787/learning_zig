@@ -54,15 +54,36 @@ fn Stack(comptime T: type, comptime len: usize) type {
         }
         fn swap_a(self: *@This()) void {
             std.debug.assert(self.separator > 1);
-            const tmp: T = self.arr[self.separator - 1];
-            self.arr[self.separator - 1] = self.arr[self.separator - 2];
-            self.arr[self.separator - 2] = tmp;
+            std.mem.swap(T, &self.arr[self.separator - 1], &self.arr[self.separator - 2]);
         }
         fn swap_b(self: *@This()) void {
             std.debug.assert(len - self.separator > 1);
-            const tmp: T = self.arr[self.separator];
-            self.arr[self.separator] = self.arr[self.separator + 1];
-            self.arr[self.separator + 1] = tmp;
+            std.mem.swap(T, &self.arr[self.separator], &self.arr[self.separator + 1]);
+        }
+        fn swap_s(self: *@This()) void {
+            self.swap_a();
+            self.swap_b();
+        }
+        fn rotate_a(self: *@This()) void {
+            std.debug.assert(self.separator > 1);
+            const tmp = self.arr[self.separator - 1];
+            var i: T = self.separator - 1;
+            while (i > 0) : (i -= 1) {
+                self.arr[i] = self.arr[i - 1];
+            }
+            self.arr[0] = tmp;
+        }
+        fn rotate_b(self: *@This()) void {
+            std.debug.assert(len - self.separator > 1);
+            const tmp = self.arr[self.separator];
+            for (self.separator..len - 1) |i| {
+                self.arr[i] = self.arr[i + 1];
+            }
+            self.arr[len - 1] = tmp;
+        }
+        fn rotate_r(self: *@This()) void {
+            self.rotate_a();
+            self.rotate_b();
         }
     };
 }
@@ -118,6 +139,52 @@ test "test swap" {
         try std.testing.expectEqual(stack.arr[stack.separator + 1], 5);
         try std.testing.expectEqual(stack.arr[stack.separator + 2], 7);
         try std.testing.expectEqual(stack.arr[stack.separator + 3], 6);
+    }
+}
+
+test "test rotate" {
+    {
+        var stack = Stack(u8, 2).initZeroed();
+        stack.fill_normalized();
+        stack.rotate_a();
+        try std.testing.expectEqual(stack.arr[0], 1);
+        try std.testing.expectEqual(stack.arr[1], 0);
+    }
+    {
+        var stack = Stack(u8, 5).initZeroed();
+        stack.fill_normalized();
+        stack.rotate_a();
+        stack.rotate_a();
+        try std.testing.expectEqual(stack.arr[0], 3);
+        try std.testing.expectEqual(stack.arr[1], 4);
+        try std.testing.expectEqual(stack.arr[2], 0);
+        try std.testing.expectEqual(stack.arr[3], 1);
+        try std.testing.expectEqual(stack.arr[4], 2);
+    }
+    {
+        var stack = Stack(u8, 5).initZeroed();
+        stack.fill_normalized();
+        for (0..5) |i| {
+            _ = i;
+            stack.push_b();
+        }
+        try std.testing.expectEqual(stack.separator, 0);
+        stack.rotate_b();
+        try std.testing.expectEqual(stack.arr[4], 0);
+        stack.rotate_b();
+        try std.testing.expectEqual(stack.arr[3], 0);
+    }
+    {
+        var stack = Stack(u8, 2).initZeroed();
+        stack.fill_normalized();
+        stack.push_b();
+        stack.push_b();
+        stack.rotate_b();
+        try std.testing.expectEqual(stack.arr[1], 0);
+        try std.testing.expectEqual(stack.arr[0], 1);
+        stack.rotate_b();
+        try std.testing.expectEqual(stack.arr[1], 1);
+        try std.testing.expectEqual(stack.arr[0], 0);
     }
 }
 
