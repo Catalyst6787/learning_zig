@@ -148,5 +148,24 @@ pub fn Stack(comptime T: type, comptime len: usize) type {
                 .rrr => self.rev_rotate_r(),
             }
         }
+        pub fn is_move_valid(self: *@This(), move: Moves, previous: Moves) bool {
+            if ((self.separator < 2 or (len - self.separator) < 2) and (move == Moves.rr or move == Moves.rrr or move == Moves.ss)) return false;
+            if (self.separator < 2 and (move == Moves.pb or move == Moves.ra or move == Moves.rra or move == Moves.sa)) return false;
+            if ((len - self.separator) < 2 and (move == Moves.pa or move == Moves.rb or move == Moves.rrb or move == Moves.sb)) return false;
+            switch (move) {
+                .pa => if (previous == Moves.pb) return false,
+                .pb => if (previous == Moves.pa) return false,
+                .sa => if (previous == Moves.sa or move == Moves.ss) return false,
+                .sb => if (previous == Moves.sb or move == Moves.ss) return false,
+                .ss => if (previous == Moves.ss or move == Moves.sa or move == Moves.sb) return false,
+                .ra => if (previous == Moves.rra or move == Moves.rrr) return false,
+                .rb => if (previous == Moves.rrb or move == Moves.rrr) return false,
+                .rr => if (previous == Moves.rrr or move == Moves.rra or move == Moves.rrb) return false,
+                .rra => if (previous == Moves.ra or move == Moves.rr) return false,
+                .rrb => if (previous == Moves.rb or move == Moves.rr) return false,
+                .rrr => if (previous == Moves.rr or move == Moves.ra or move == Moves.rb) return false,
+            }
+            return true;
+        }
     };
 }
