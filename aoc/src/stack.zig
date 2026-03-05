@@ -37,29 +37,6 @@ pub fn Stack(comptime T: type, comptime len: usize) type {
         pub fn shuffle(self: *@This(), rnd: *const std.Random) void {
             std.Random.shuffle(rnd.*, T, &self.arr);
         }
-        pub fn old_print(self: *const @This()) void { // print is reversed first stack is reverse but second is in the correct order. fix print function to account for this TODO
-            std.debug.print("len: {d}, separator: {d}, a:\n", .{ len, self.separator });
-            if (self.separator == 0) {
-                std.debug.print("|empty|\n", .{});
-            }
-            if (self.separator > 0) {
-                for (self.arr[0..self.separator]) |elem| {
-                    std.debug.print("|{d}", .{elem});
-                }
-                std.debug.print("|\n", .{});
-            }
-            std.debug.print("b:\n", .{});
-            if (self.separator == len) {
-                std.debug.print("|empty|\n", .{});
-                return;
-            }
-            var i: usize = len - 1;
-            while (i >= self.separator) : (i -= 1) {
-                std.debug.print("|{d}", .{self.arr[i]});
-                if (i == 0) break;
-            }
-            std.debug.print("|\n", .{});
-        }
         pub fn print(self: *const @This()) void {
             var biggest = get_len_a(self);
             if (get_len_b(self) > biggest) {
@@ -67,21 +44,26 @@ pub fn Stack(comptime T: type, comptime len: usize) type {
             }
 
             std.debug.print("len: {d}, separator: {d}\n", .{ len, self.separator });
+
             for (0..biggest) |index| {
                 const elem_a = get_elem_from_a(self, index);
                 const elem_b = get_elem_from_b(self, index);
+
                 std.debug.print("|", .{});
                 if (elem_a != null) {
-                    std.debug.print("{d}", .{elem_a.?});
+                    std.debug.print("{d: >4}", .{elem_a.?});
                 } else {
-                    std.debug.print(" ", .{});
+                    std.debug.print("{s: >4}", .{" "});
                 }
+
                 std.debug.print("| |", .{});
+
                 if (elem_b != null) {
-                    std.debug.print("{d}|", .{elem_b.?});
+                    std.debug.print("{d: >4}|", .{elem_b.?});
                 } else {
-                    std.debug.print(" |", .{});
+                    std.debug.print("{s: >4}|", .{" "});
                 }
+
                 std.debug.print("\n", .{});
             }
         }

@@ -9,16 +9,16 @@ fn PrintMoves(moves: []stack_type.Moves) void {
     std.debug.print("\n", .{});
 }
 
-fn VisualizeMoves(T: type, moves: []stack_type.Moves, original_stack: *T) void {
-    std.debug.print("\napplying moves:\noriginal stack:\n", .{});
+fn ApplyMoves(T: type, moves: []stack_type.Moves, original_stack: *T) void {
+    // std.debug.print("\napplying moves:\noriginal stack:\n", .{});
     original_stack.print();
-    std.debug.print("\n", .{});
+    // std.debug.print("\n", .{});
     for (moves) |move| {
-        std.debug.print("move: {s}:\n", .{@tagName(move)});
+        // std.debug.print("move: {s}:\n", .{@tagName(move)});
         original_stack.apply_move(move);
-        original_stack.print();
-        std.debug.print("inversion count: {d}", .{original_stack.count_inversions()});
-        std.debug.print("\n", .{});
+        // original_stack.print();
+        // std.debug.print("inversion count: {d}", .{original_stack.count_inversions()});
+        // std.debug.print("\n", .{});
     }
 }
 
@@ -29,31 +29,29 @@ fn SolveStruct(Stack: type, max_depth: usize) type {
         moves_buff: [max_depth]stack_type.Moves,
         best_inversions: usize,
         best_moves: [max_depth]stack_type.Moves,
-        best_moves_depht: usize,
-        total_explored: usize = 0,
+        best_moves_depth: usize,
+        nbr_explored: usize = 0,
     };
 }
 
 fn solve_rec(comptime Stack: type, comptime max_depth: usize, solve_st: *SolveStruct(Stack, max_depth), depth: usize, move: stack_type.Moves) usize {
     solve_st.buffer[depth].apply_move(move);
-    // std.debug.print("solving at depht={d}, move={d}, stack:\n", .{ depth, move });
-    // solve_st.buffer[depth].print();
     solve_st.moves_buff[depth] = move;
 
     const current_inversions: usize = solve_st.buffer[depth].count_inversions();
-    solve_st.total_explored += 1;
+    solve_st.nbr_explored += 1;
 
-    if (current_inversions == 0) {
-        std.debug.print("solving at depht={d}, move={s}, stack:\n", .{ depth, @tagName(move) });
-        solve_st.buffer[depth].print();
-        std.debug.print("current inversions count: {d}\n", .{current_inversions});
-        const moves_slice = solve_st.moves_buff[0..depth];
-        PrintMoves(moves_slice);
-    }
+    // if (current_inversions == 0) {
+    //     std.debug.print("solving at depht={d}, move={s}, stack:\n", .{ depth, @tagName(move) });
+    //     solve_st.buffer[depth].print();
+    //     std.debug.print("current inversions count: {d}\n", .{current_inversions});
+    //     const moves_slice = solve_st.moves_buff[0..depth];
+    //     PrintMoves(moves_slice);
+    // }
     if (current_inversions < solve_st.best_inversions) {
         solve_st.best_inversions = current_inversions;
         solve_st.best_moves = solve_st.moves_buff;
-        solve_st.best_moves_depht = depth;
+        solve_st.best_moves_depth = depth;
         if (current_inversions == 0) return current_inversions;
     }
     if (depth == max_depth - 1) return current_inversions;
@@ -68,10 +66,10 @@ fn solve_rec(comptime Stack: type, comptime max_depth: usize, solve_st: *SolveSt
     return solve_st.best_inversions;
 }
 
-fn solve(comptime Stack: type, stack: Stack, comptime max_depth: usize) void {
+fn solve(comptime Stack: type, stack: Stack, comptime max_depth: usize, iterations: usize, total_explored: usize, total_depth: usize, total_moves: *std.ArrayList(stack_type.Moves), gpa: std.mem.Allocator) !void {
     var solve_st: SolveStruct(Stack, max_depth) = undefined;
     solve_st.max_depth = max_depth;
-    solve_st.total_explored = 0;
+    solve_st.nbr_explored = 0;
     var best: usize = undefined;
     for (std.enums.values(stack_type.Moves)) |move| {
         std.mem.copyForwards(u8, &solve_st.buffer[0].arr, &stack.arr);
@@ -80,33 +78,44 @@ fn solve(comptime Stack: type, stack: Stack, comptime max_depth: usize) void {
             best = solve_rec(Stack, max_depth, &solve_st, 0, move);
         }
     }
-    std.debug.print("\n\n---\n\n", .{});
-    std.debug.print("total moves explored: {d}\n", .{solve_st.total_explored});
-    std.debug.print("best result: {d}, depth: {d}, moves:\n", .{ best, solve_st.best_moves_depht });
-    const best_moves_slice = solve_st.best_moves[0 .. solve_st.best_moves_depht + 1];
-    PrintMoves(best_moves_slice);
     var newStack = stack;
-    VisualizeMoves(Stack, best_moves_slice, &newStack);
+    const best_moves_slice = solve_st.best_moves[0 .. solve_st.best_moves_depth + 1];
+    ApplyMoves(Stack, best_moves_slice, &newStack);
+    std.debug.print("\n---\n", .{});
+    std.debug.print("iterations n: {d}\n", .{iterations + 1});
+    std.debug.print("nbr moves explored: {d}\n", .{solve_st.nbr_explored});
+    std.debug.print("best result: {d}, depth: {d}, moves:\n", .{ best, solve_st.best_moves_depth });
+    std.debug.print("total nbr moves explored: {d}\n", .{total_explored + solve_st.nbr_explored});
+    std.debug.print("total depth: {d}\n", .{total_depth + solve_st.best_moves_depth});
+    PrintMoves(best_moves_slice);
+    try total_moves.appendSlice(gpa, best_moves_slice);
+    std.debug.print("New Stack:\n", .{});
+    newStack.print();
+    if (best > 0) {
+        try solve(Stack, newStack, max_depth, iterations + 1, total_explored + solve_st.nbr_explored, total_depth + solve_st.best_moves_depth + 1, total_moves, gpa);
+    }
 }
 
 pub fn main(init: std.process.Init) !void {
-    // const gpa = init.gpa;
+    const gpa = init.gpa;
     // const args: []const []const u8 = try init.minimal.args.toSlice(gpa);
     // defer gpa.free(args);
     // var seed: u64 = undefined;
     // init.io.random(std.mem.asBytes(&seed));
-    _ = init;
     var prng = std.Random.DefaultPrng.init(42421337);
     const rnd = prng.random();
 
-    const StackType = stack_type.Stack(u8, 7);
+    const StackType = stack_type.Stack(u8, 20);
     var random_stack = StackType.initZeroed();
     random_stack.fill_normalized();
     random_stack.shuffle(&rnd);
     std.debug.print("starting stack:\n", .{});
     random_stack.print();
     std.debug.print("\n---\n", .{});
-    solve(StackType, random_stack, 9);
+    var total_moves = try std.ArrayList(stack_type.Moves).initCapacity(gpa, 100);
+    defer total_moves.deinit(gpa);
+    try solve(StackType, random_stack, 6, 0, 0, 0, &total_moves, gpa);
+    PrintMoves(total_moves.items);
 }
 
 test "test push" {
