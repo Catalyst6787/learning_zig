@@ -37,7 +37,7 @@ pub fn Stack(comptime T: type, comptime len: usize) type {
         pub fn shuffle(self: *@This(), rnd: *const std.Random) void {
             std.Random.shuffle(rnd.*, T, &self.arr);
         }
-        pub fn print(self: *const @This()) void {
+        pub fn old_print(self: *const @This()) void { // print is reversed first stack is reverse but second is in the correct order. fix print function to account for this TODO
             std.debug.print("len: {d}, separator: {d}, a:\n", .{ len, self.separator });
             if (self.separator == 0) {
                 std.debug.print("|empty|\n", .{});
@@ -59,6 +59,56 @@ pub fn Stack(comptime T: type, comptime len: usize) type {
                 if (i == 0) break;
             }
             std.debug.print("|\n", .{});
+        }
+        pub fn print(self: *const @This()) void {
+            var biggest = get_len_a(self);
+            if (get_len_b(self) > biggest) {
+                biggest = get_len_b(self);
+            }
+
+            std.debug.print("len: {d}, separator: {d}\n", .{ len, self.separator });
+            for (0..biggest) |index| {
+                const elem_a = get_elem_from_a(self, index);
+                const elem_b = get_elem_from_b(self, index);
+                std.debug.print("|", .{});
+                if (elem_a != null) {
+                    std.debug.print("{d}", .{elem_a.?});
+                } else {
+                    std.debug.print(" ", .{});
+                }
+                std.debug.print("| |", .{});
+                if (elem_b != null) {
+                    std.debug.print("{d}|", .{elem_b.?});
+                } else {
+                    std.debug.print(" |", .{});
+                }
+                std.debug.print("\n", .{});
+            }
+        }
+        pub fn get_len_a(self: *const @This()) usize {
+            return self.separator;
+        }
+        pub fn get_len_b(self: *const @This()) usize {
+            return len - self.separator;
+        }
+        pub fn print_raw(self: *const @This()) void {
+            std.debug.print("len: {d}, separator: {d}\n", .{ len, self.separator });
+            for (self.arr[0..len]) |elem| {
+                std.debug.print("|{d}", .{elem});
+            }
+            std.debug.print("|\n", .{});
+        }
+        pub fn get_elem_from_a(self: *const @This(), index: usize) ?T {
+            if (index >= self.separator)
+                return null;
+            std.debug.assert(self.separator - index - 1 >= 0);
+            return self.arr[self.separator - index - 1];
+        }
+        pub fn get_elem_from_b(self: *const @This(), index: usize) ?T {
+            if (self.separator + index >= len) {
+                return null;
+            }
+            return self.arr[self.separator + index];
         }
         pub fn count_inversions(self: *const @This()) usize {
             var inversions: usize = 0;
