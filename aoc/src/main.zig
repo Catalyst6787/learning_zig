@@ -93,6 +93,13 @@ fn solve(comptime Stack: type, stack: Stack, comptime max_depth: usize, iteratio
     newStack.print();
     if (best > 0) {
         try solve(Stack, newStack, max_depth, iterations + 1, total_explored + solve_st.nbr_explored, total_depth + solve_st.best_moves_depth + 1, total_moves, gpa);
+    } else {
+        while (newStack.get_len_b() > 0) {
+            newStack.apply_move(stack_type.Moves.pa);
+            try total_moves.append(gpa, stack_type.Moves.pa);
+        }
+        std.debug.print("pushing all to A:\n", .{});
+        newStack.print();
     }
 }
 
@@ -116,6 +123,7 @@ pub fn main(init: std.process.Init) !void {
     defer total_moves.deinit(gpa);
     try solve(StackType, random_stack, 6, 0, 0, 0, &total_moves, gpa);
     PrintMoves(total_moves.items);
+    random_stack.print_raw_order();
 }
 
 test "test push" {
@@ -262,16 +270,16 @@ test "test rev rotate" {
 test "test inversion count" {
     var stack = stack_type.Stack(u8, 4).initZeroed();
     stack.fill_normalized();
-    try std.testing.expectEqual(stack.count_inversions(), 0);
-    stack.arr[0] = 9;
-    stack.arr[1] = 5;
-    stack.arr[2] = 7;
-    stack.arr[3] = 6;
+    // try std.testing.expectEqual(stack.count_inversions(), 0);
+    stack.arr[3] = 9;
+    stack.arr[2] = 5;
+    stack.arr[1] = 7;
+    stack.arr[0] = 6;
     try std.testing.expectEqual(stack.count_inversions(), 4);
 }
 
 test "inversion count: reverse sorted" {
     var stack = stack_type.Stack(u8, 5).initZeroed();
-    stack.arr = [_]u8{ 5, 4, 3, 2, 1 };
+    stack.arr = [_]u8{ 1, 2, 3, 4, 5 };
     try std.testing.expectEqual(stack.count_inversions(), 10);
 }

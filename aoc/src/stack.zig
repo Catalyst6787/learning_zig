@@ -73,12 +73,25 @@ pub fn Stack(comptime T: type, comptime len: usize) type {
         pub fn get_len_b(self: *const @This()) usize {
             return len - self.separator;
         }
-        pub fn print_raw(self: *const @This()) void {
+        pub fn print_raw_reverse(self: *const @This()) void {
             std.debug.print("len: {d}, separator: {d}\n", .{ len, self.separator });
             for (self.arr[0..len]) |elem| {
-                std.debug.print("|{d}", .{elem});
+                std.debug.print("{d} ", .{elem});
             }
-            std.debug.print("|\n", .{});
+            std.debug.print("\n", .{});
+        }
+        pub fn print_raw_order(self: *const @This()) void {
+            std.debug.print("len: {d}, separator: {d}\n", .{ len, self.separator });
+            var index: usize = len - 1;
+            while (index >= 0) {
+                std.debug.print("{d} ", .{self.arr[index]});
+                if (index > 0) {
+                    index -= 1;
+                } else {
+                    break;
+                }
+            }
+            std.debug.print("\n", .{});
         }
         pub fn get_elem_from_a(self: *const @This(), index: usize) ?T {
             if (index >= self.separator)
@@ -96,7 +109,7 @@ pub fn Stack(comptime T: type, comptime len: usize) type {
             var inversions: usize = 0;
             for (self.arr, 0..) |ai, i| {
                 for (self.arr[i + 1 ..]) |aj| {
-                    if (ai > aj) {
+                    if (ai < aj) {
                         inversions += 1;
                     }
                 }
